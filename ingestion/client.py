@@ -17,6 +17,10 @@ USER_AGENT = "f1-race-analytics/0.1 (+https://github.com/Emmanuel-Esplin/f1-race
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
 
+class OutOfTimeError(RuntimeError):
+    """The caller's time budget is spent. Files already written are kept; rerun to continue."""
+
+
 class LiveSessionLockError(RuntimeError):
     """OpenF1 refuses anonymous requests, even for past sessions, while a session is live."""
 
@@ -36,6 +40,7 @@ class ApiClient:
         min_interval_s: float,
         timeout_s: float = 30.0,
         transport: httpx.BaseTransport | None = None,
+        deadline: float | None = None,
     ) -> None:
         # `transport` lets tests swap in httpx.MockTransport instead of the network.
         self._http = httpx.Client(
@@ -46,6 +51,8 @@ class ApiClient:
         )
         self._min_interval_s = min_interval_s
         self._last_request = 0.0
+        # time.monotonic() value after which no new request starts (Lambda has a hard limit).
+        self._deadline = deadline
 
     def __enter__(self) -> ApiClient:
         return self
@@ -54,6 +61,8 @@ class ApiClient:
         self._http.close()
 
     def _wait_turn(self) -> None:
+        if self._deadline is not None and time.monotonic() >= self._deadline:
+            raise OutOfTimeError("time budget spent")
         # Sleeping before each call keeps us under the documented hourly limits.
         gap = time.monotonic() - self._last_request
         if gap < self._min_interval_s:

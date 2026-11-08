@@ -127,3 +127,36 @@ def test_openf1_lands_finished_race_sessions_only(bronze_dir):
 def test_parse_seasons():
     assert parse_seasons("2023-2025") == [2023, 2024, 2025]
     assert parse_seasons("2023,2026") == [2023, 2026]
+
+
+def test_deadline_stops_new_requests():
+    import time
+
+    from ingestion.client import OutOfTimeError
+
+    client = ApiClient(
+        "https://example.test",
+        0,
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})),
+        deadline=time.monotonic() - 1,
+    )
+    with pytest.raises(OutOfTimeError):
+        client.get_json("/x")
+
+
+def test_ingest_reports_incomplete_when_out_of_time(monkeypatch):
+    import time
+
+    from ingestion import run
+
+    calls = []
+
+    def fake_season(client, season, today, refresh):
+        calls.append(season)
+        client._wait_turn()  # the first request after the deadline raises
+        return 1
+
+    monkeypatch.setattr(jolpica, "ingest_season", fake_season)
+    result = run.ingest(["jolpica"], [2025, 2026], deadline=time.monotonic() - 1)
+    assert result == {"written": 0, "complete": False}
+    assert calls == [2025]

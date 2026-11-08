@@ -113,6 +113,11 @@ run "pipeline_is_wired_once_an_image_exists" {
   }
 
   assert {
+    condition     = jsondecode(aws_sfn_state_machine.pipeline[0].definition).States.MoreToFetch.Choices[0].Next == "Ingest"
+    error_message = "Ingest must loop until complete, because one Lambda run is capped at 15 minutes."
+  }
+
+  assert {
     condition     = aws_scheduler_schedule.pipeline[0].schedule_expression == "cron(0 6 ? * MON,THU *)"
     error_message = "The pipeline runs Monday and Thursday mornings."
   }

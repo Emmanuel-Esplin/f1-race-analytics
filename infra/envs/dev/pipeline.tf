@@ -239,7 +239,13 @@ resource "aws_sfn_state_machine" "pipeline" {
           { ErrorEquals = ["LiveSessionLockError"], IntervalSeconds = 3600, MaxAttempts = 6, BackoffRate = 1 },
           local.lambda_retry,
         ]
-        Next = "Silver"
+        Next = "MoreToFetch"
+      }
+      # Ingest stops before Lambda's 15-minute limit; loop until it has fetched everything.
+      MoreToFetch = {
+        Type    = "Choice"
+        Choices = [{ Variable = "$.complete", BooleanEquals = false, Next = "Ingest" }]
+        Default = "Silver"
       }
       Silver = {
         Type       = "Task"

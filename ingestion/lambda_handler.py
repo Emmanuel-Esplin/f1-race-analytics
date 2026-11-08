@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -20,16 +21,24 @@ log = logging.getLogger(__name__)
 DBT_PROJECT = Path(os.environ.get("LAMBDA_TASK_ROOT", ".")) / "transform"
 
 
-def ingest_handler(event: dict[str, Any], _context: object) -> dict[str, Any]:
+# Stop starting requests this long before Lambda's hard timeout.
+SAFETY_MARGIN_S = 90
+
+
+def ingest_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Fetch new data. Defaults to the current season; finished rounds are skipped.
 
+    Returns complete=False when time ran out, and Step Functions invokes it again.
     LiveSessionLockError is left to propagate: Step Functions retries it an hour later.
     """
     seasons = event.get("seasons") or [datetime.now(UTC).year]
     sources = event.get("sources") or ["jolpica", "openf1"]
-    written = ingest(sources, [int(s) for s in seasons], bool(event.get("refresh")))
-    log.info("wrote %d bronze files", written)
-    return {"written": written}
+    remaining_s = context.get_remaining_time_in_millis() / 1000
+    deadline = time.monotonic() + remaining_s - SAFETY_MARGIN_S
+    result = ingest(sources, [int(s) for s in seasons], bool(event.get("refresh")), deadline)
+    log.info("wrote %d bronze files, complete=%s", result["written"], result["complete"])
+    # Echo the request so a loop in Step Functions repeats the same work.
+    return {**event, **result}
 
 
 def silver_handler(_event: dict[str, Any], _context: object) -> dict[str, Any]:

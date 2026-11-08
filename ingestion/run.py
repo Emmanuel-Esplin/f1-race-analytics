@@ -8,7 +8,7 @@ import sys
 from datetime import UTC, datetime
 
 from ingestion import jolpica, openf1
-from ingestion.client import ApiClient, LiveSessionLockError
+from ingestion.client import ApiClient, LiveSessionLockError, OutOfTimeError
 
 FIRST_SEASON = 2023  # OpenF1 race-control data starts here.
 
@@ -24,20 +24,29 @@ def parse_seasons(text: str) -> list[int]:
     return seasons
 
 
-def ingest(sources: list[str], seasons: list[int], refresh: bool = False) -> int:
-    """Land bronze files for `sources` and `seasons`. Raises LiveSessionLockError if OpenF1 is
-    locked. Returns the number of files written."""
+def ingest(
+    sources: list[str], seasons: list[int], refresh: bool = False, deadline: float | None = None
+) -> dict[str, int | bool]:
+    """Land bronze files for `sources` and `seasons`.
+
+    Stops early once `deadline` (a time.monotonic() value) passes, returning complete=False;
+    a rerun carries on, because finished files are skipped. Raises LiveSessionLockError if
+    OpenF1 is locked.
+    """
     now = datetime.now(UTC)
     written = 0
-    if "jolpica" in sources:
-        with ApiClient(jolpica.BASE_URL, jolpica.MIN_INTERVAL_S) as client:
-            for season in seasons:
-                written += jolpica.ingest_season(client, season, now.date(), refresh)
-    if "openf1" in sources:
-        with ApiClient(openf1.BASE_URL, openf1.MIN_INTERVAL_S) as client:
-            for season in seasons:
-                written += openf1.ingest_season(client, season, now, refresh)
-    return written
+    try:
+        if "jolpica" in sources:
+            with ApiClient(jolpica.BASE_URL, jolpica.MIN_INTERVAL_S, deadline=deadline) as client:
+                for season in seasons:
+                    written += jolpica.ingest_season(client, season, now.date(), refresh)
+        if "openf1" in sources:
+            with ApiClient(openf1.BASE_URL, openf1.MIN_INTERVAL_S, deadline=deadline) as client:
+                for season in seasons:
+                    written += openf1.ingest_season(client, season, now, refresh)
+    except OutOfTimeError:
+        return {"written": written, "complete": False}
+    return {"written": written, "complete": True}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,12 +61,12 @@ def main(argv: list[str] | None = None) -> int:
 
     sources = ["jolpica", "openf1"] if args.source == "all" else [args.source]
     try:
-        written = ingest(sources, args.seasons, args.refresh)
+        result = ingest(sources, args.seasons, args.refresh)
     except LiveSessionLockError:
         # Exit 75 (EX_TEMPFAIL) so a scheduler knows to retry, not to alert.
         logging.warning("OpenF1 is locked during a live session; try again after it ends")
         return 75
-    logging.info("wrote %d bronze files", written)
+    logging.info("wrote %d bronze files", result["written"])
     return 0
 
 
