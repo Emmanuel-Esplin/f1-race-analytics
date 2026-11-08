@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: mart_race_winners
+    description: Winner of every race and sprint since 2023.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, session_type]
+    columns:
+      - name: session_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [race, sprint]
+      - name: driver_id
+        data_tests: [not_null]
+
+  - name: mart_lap_leaders
+    description: Laps led per driver per race.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id]
+    columns:
+      - name: laps_led
+        data_tests: [not_null]
+
+  - name: mart_championship_progression
+    description: Championship standings after every round, drivers and constructors.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, championship, competitor_id]
+    columns:
+      - name: championship
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [drivers, constructors]

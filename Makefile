@@ -7,6 +7,9 @@ SEASONS ?= 2023-2026
 
 .PHONY: install lint format test ingest ingest-jolpica ingest-openf1 silver gold all
 
+DBT = cd transform && F1_DATA_DIR=$(CURDIR)/data DBT_SEND_ANONYMOUS_USAGE_STATS=false \
+	$(CURDIR)/.venv/bin/dbt
+
 install:
 	# .nosync keeps these out of iCloud, which offloads files and makes reads hang.
 	mkdir -p data.nosync
@@ -38,5 +41,14 @@ ingest-jolpica:
 # Exits 75 while a live F1 session locks the API; rerun after the session ends.
 ingest-openf1:
 	$(PYTHON) -m ingestion.run --source openf1 --seasons $(SEASONS)
+
+# Silver is rebuilt from all of bronze each time; it takes seconds.
+silver:
+	$(PYTHON) -m processing.silver
+
+# Builds and tests every model on DuckDB (data/gold/warehouse.duckdb).
+gold: silver
+	mkdir -p data/gold
+	$(DBT) build --profiles-dir .
 
 all: lint test
