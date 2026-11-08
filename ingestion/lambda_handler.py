@@ -49,8 +49,19 @@ def silver_handler(_event: dict[str, Any], _context: object) -> dict[str, Any]:
     return {table: build_table(table, store()) for table in TABLES}
 
 
+def _use_thread_locks() -> None:
+    """Lambda has no /dev/shm, so multiprocessing locks can't be created. dbt only uses them
+    within one process (its models run in threads), so threading locks are equivalent."""
+    import multiprocessing.context
+    import threading
+
+    multiprocessing.context.BaseContext.Lock = lambda self: threading.Lock()
+    multiprocessing.context.BaseContext.RLock = lambda self: threading.RLock()
+
+
 def dbt_handler(event: dict[str, Any], _context: object) -> dict[str, Any]:
     """Build and test the marts on Athena."""
+    _use_thread_locks()
     from dbt.cli.main import dbtRunner
 
     # The image is read-only outside /tmp.
