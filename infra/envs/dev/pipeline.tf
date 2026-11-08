@@ -82,9 +82,12 @@ data "aws_iam_policy_document" "fn" {
       sid = "QueryInOwnWorkgroup"
       actions = [
         "athena:StartQueryExecution", "athena:GetQueryExecution", "athena:GetQueryResults",
-        "athena:StopQueryExecution", "athena:GetWorkGroup",
+        "athena:StopQueryExecution", "athena:GetWorkGroup", "athena:GetDataCatalog",
       ]
-      resources = [aws_athena_workgroup.f1.arn]
+      resources = [
+        aws_athena_workgroup.f1.arn,
+        "arn:aws:athena:${var.region}:${data.aws_caller_identity.current.account_id}:datacatalog/AwsDataCatalog",
+      ]
     }
   }
 
@@ -96,6 +99,9 @@ data "aws_iam_policy_document" "fn" {
         "glue:GetDatabase", "glue:GetDatabases", "glue:GetTable", "glue:GetTables",
         "glue:GetPartition", "glue:GetPartitions", "glue:BatchGetPartition",
         "glue:CreateTable", "glue:UpdateTable", "glue:DeleteTable", "glue:BatchDeleteTable",
+        # dbt-athena reads and prunes old table versions after it replaces a table or view.
+        "glue:GetTableVersion", "glue:GetTableVersions", "glue:DeleteTableVersion",
+        "glue:BatchDeleteTableVersion", "glue:BatchDeletePartition",
       ]
       resources = [
         "${local.glue_arn}:catalog",
