@@ -88,8 +88,7 @@ def test_session_rows_keep_races_and_sprints_only():
     assert [r["session_key"] for r in silver.session_rows(sessions)] == [1]
 
 
-def test_build_table_writes_one_parquet_per_season(tmp_path, monkeypatch):
-    monkeypatch.setattr(landing, "DATA_DIR", tmp_path)
+def test_build_table_writes_one_parquet_per_season(bronze_dir):
     for season in (2023, 2024):
         messages = [
             {
@@ -103,7 +102,13 @@ def test_build_table_writes_one_parquet_per_season(tmp_path, monkeypatch):
         path = landing.bronze_path("openf1", "race_control", season=season, session_key=9)
         landing.write_bronze(path, messages, "https://example.test")
 
-    assert silver.build_table("race_control", tmp_path) == 2
-    table = pq.read_table(tmp_path / "silver/race_control/season=2024/part-0.parquet")
+    assert silver.build_table("race_control", landing.store()) == 2
+    table = pq.read_table(bronze_dir / "silver/race_control/season=2024/part-0.parquet")
     assert table.column("season").to_pylist() == [2024]
     assert table.schema == silver.SCHEMAS["race_control"]
+
+
+def test_terraform_schemas_match_silver():
+    from processing import schemas_export
+
+    assert schemas_export.TARGET.read_text() == schemas_export.render(), "run `make schemas`"

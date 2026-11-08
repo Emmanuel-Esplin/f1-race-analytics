@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from ingestion.client import ApiClient
-from ingestion.landing import bronze_path, is_final, read_bronze, write_bronze
+from ingestion.landing import bronze_path, is_final, read_bronze, store, write_bronze
 
 BASE_URL = "https://api.openf1.org/v1"
 # The free tier allows a few requests a second; one every two seconds is plenty.
@@ -32,7 +32,7 @@ def ingest_season(client: ApiClient, season: int, now: datetime, refresh: bool =
     written = 0
     sessions_file = bronze_path("openf1", "sessions", season=season)
     season_over = datetime(season + 1, 1, 1, tzinfo=UTC) + timedelta(days=SETTLE_DAYS) < now
-    if refresh or not sessions_file.exists() or not season_over:
+    if refresh or not store().exists(sessions_file) or not season_over:
         sessions = client.get_json("/sessions", params={"year": season})
         write_bronze(sessions_file, sessions, f"{BASE_URL}/sessions?year={season}")
         written += 1

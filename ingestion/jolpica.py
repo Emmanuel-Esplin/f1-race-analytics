@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from ingestion.client import ApiClient
-from ingestion.landing import bronze_path, is_final, read_bronze, write_bronze
+from ingestion.landing import bronze_path, is_final, read_bronze, store, write_bronze
 
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 PAGE_SIZE = 100  # The API's maximum.
@@ -49,7 +49,7 @@ def ingest_season(client: ApiClient, season: int, today: date, refresh: bool = F
     written = 0
     calendar_file = bronze_path("jolpica", "races", season=season)
     season_over = date(season, 12, 31) + timedelta(days=SETTLE_DAYS) < today
-    if refresh or not calendar_file.exists() or not season_over:
+    if refresh or not store().exists(calendar_file) or not season_over:
         pages = fetch_all_pages(client, f"/{season}.json")
         write_bronze(calendar_file, pages, f"{BASE_URL}/{season}.json")
         written += 1

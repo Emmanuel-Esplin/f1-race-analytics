@@ -1,11 +1,20 @@
 # Usage: make install | make lint | make test | make ingest | make silver | make gold | make all
+#        make schemas | make tf-check | make tf-plan | make tf-apply | make tf-destroy
+#        make image-push | make bronze-upload | make pipeline-run | make dbt-athena
 PYTHON ?= .venv/bin/python
 BOOTSTRAP_PYTHON ?= /opt/anaconda3/bin/python
 # macOS can hide the editable-install .pth under iCloud-synced Desktop, so set this explicitly.
 export PYTHONPATH := $(CURDIR)
 SEASONS ?= 2023-2026
 
-.PHONY: install lint format test ingest ingest-jolpica ingest-openf1 silver gold all
+# Provider binaries go in a .nosync folder, because iCloud offloading makes them hang.
+export TF_DATA_DIR := .terraform.nosync
+TF_DEV = terraform -chdir=infra/envs/dev
+TF_OUT = $(TF_DEV) output -raw
+IMAGE_TAG ?= $(shell git rev-parse --short=12 HEAD)
+
+.PHONY: install lint format test ingest ingest-jolpica ingest-openf1 silver gold all schemas \
+	tf-check tf-plan tf-apply tf-destroy image-push bronze-upload pipeline-run dbt-athena
 
 DBT = cd transform && F1_DATA_DIR=$(CURDIR)/data DBT_SEND_ANONYMOUS_USAGE_STATS=false \
 	$(CURDIR)/.venv/bin/dbt
@@ -52,3 +61,53 @@ gold: silver
 	$(DBT) build --profiles-dir .
 
 all: lint test
+
+# Glue table columns come from processing/silver.py.
+schemas:
+	$(PYTHON) -m processing.schemas_export
+
+# No AWS credentials needed: the tests use a mocked provider.
+tf-check:
+	terraform fmt -check -recursive infra
+	$(TF_DEV) init -input=false -backend=false >/dev/null
+	$(TF_DEV) validate
+	$(TF_DEV) test
+	for m in budget s3_lake; do \
+		terraform -chdir=infra/modules/$$m init -input=false >/dev/null && \
+		terraform -chdir=infra/modules/$$m test || exit 1; \
+	done
+
+# Review the plan; `make tf-apply` then applies exactly that plan. Use IMAGE_TAG= (empty) for
+# the first apply, before any image exists.
+tf-plan: test
+	$(TF_DEV) init -input=false >/dev/null
+	$(TF_DEV) plan -var image_tag=$(IMAGE_TAG) -out=tfplan.nosync
+
+tf-apply:
+	$(TF_DEV) apply tfplan.nosync
+
+tf-destroy:
+	$(TF_DEV) destroy -var image_tag=
+
+# ECR tags are immutable, so the git commit names the image. Commit before pushing.
+image-push: test
+	@git diff --quiet HEAD || (echo "commit first: the image tag is the commit" && exit 1)
+	aws ecr get-login-password | docker login --username AWS --password-stdin \
+		$$($(TF_OUT) ecr_repository_url | cut -d/ -f1)
+	docker build --platform linux/arm64 --provenance=false \
+		-t $$($(TF_OUT) ecr_repository_url):$(IMAGE_TAG) .
+	docker push $$($(TF_OUT) ecr_repository_url):$(IMAGE_TAG)
+
+# Seeds S3 with the local backfill, so Lambda only ever fetches new rounds.
+bronze-upload:
+	aws s3 sync data/bronze s3://$$($(TF_OUT) lake_bucket)/bronze \
+		--exclude "*.tmp" --only-show-errors
+
+pipeline-run:
+	aws stepfunctions start-execution --state-machine-arn $$($(TF_OUT) state_machine_arn)
+
+# Builds the marts on Athena from this machine, with your `aws login` session.
+dbt-athena:
+	cd transform && LAKE_BUCKET=$$(cd .. && $(TF_OUT) lake_bucket) \
+		DBT_SEND_ANONYMOUS_USAGE_STATS=false \
+		$(CURDIR)/.venv/bin/dbt build --profiles-dir . --target athena

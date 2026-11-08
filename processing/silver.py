@@ -8,9 +8,7 @@ from __future__ import annotations
 
 import argparse
 import logging
-import shutil
 from collections.abc import Callable, Iterator
-from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
@@ -338,27 +336,28 @@ TABLES: dict[str, list[tuple[str, Builder]]] = {
 }
 
 
-def _bronze_files(endpoint_dir: Path) -> Iterator[tuple[int, Path]]:
+def _bronze_files(store: landing.Storage, endpoint: str) -> Iterator[tuple[int, str]]:
     # Files sit at season=YYYY.json or season=YYYY/<key>.json.
-    for path in sorted(endpoint_dir.rglob("*.json")):
-        season_part = next(p for p in path.relative_to(endpoint_dir).parts if "season=" in p)
+    for path in store.list_files(store.path("bronze", endpoint), ".json"):
+        season_part = next(p for p in path.split("/") if p.startswith("season="))
         yield int(season_part.removesuffix(".json").split("=")[1]), path
 
 
-def build_table(table: str, data_dir: Path) -> int:
+def build_table(table: str, store: landing.Storage) -> int:
     """Rebuild one silver table from all of bronze. Returns the row count."""
     rows_by_season: dict[int, list[Row]] = {}
     for endpoint, build in TABLES[table]:
-        for season, path in _bronze_files(data_dir / "bronze" / endpoint):
+        for season, path in _bronze_files(store, endpoint):
             rows_by_season.setdefault(season, []).extend(build(landing.read_bronze(path), season))
 
     # Rebuilt from scratch, so a season removed from bronze can't linger in silver.
-    shutil.rmtree(data_dir / "silver" / table, ignore_errors=True)
+    store.delete_dir(store.path("silver", table))
     total = 0
     for season, rows in sorted(rows_by_season.items()):
-        target = data_dir / "silver" / table / f"season={season}" / "part-0.parquet"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        pq.write_table(pa.Table.from_pylist(rows, schema=SCHEMAS[table]), target)
+        target = store.path("silver", table, f"season={season}", "part-0.parquet")
+        store.fs.create_dir(target.rsplit("/", 1)[0], recursive=True)
+        table_data = pa.Table.from_pylist(rows, schema=SCHEMAS[table])
+        pq.write_table(table_data, target, filesystem=store.fs)
         total += len(rows)
     return total
 
@@ -373,7 +372,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"unknown tables: {', '.join(sorted(unknown))}")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     for table in args.tables or TABLES:
-        log.info("silver %s: %d rows", table, build_table(table, landing.DATA_DIR))
+        log.info("silver %s: %d rows", table, build_table(table, landing.store()))
     return 0
 
 

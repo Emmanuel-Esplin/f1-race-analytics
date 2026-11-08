@@ -1,0 +1,28 @@
+# Checkov (IaC misconfiguration scan) runs in CI. Each skip below is a deliberate trade-off for
+# a public-data portfolio project on a small budget; anything not listed fails the build.
+framework:
+  - terraform
+compact: true
+quiet: true
+skip-check:
+  # Customer-managed KMS keys cost $1/month each plus API calls. The data is public race results,
+  # so AWS-managed encryption (SSE-S3, AES256) is enough.
+  - CKV_AWS_145  # S3 KMS by default
+  - CKV_AWS_136  # ECR KMS
+  - CKV_AWS_158  # CloudWatch Logs KMS
+  - CKV_AWS_173  # Lambda env vars KMS: they hold a bucket name, no secrets
+  - CKV_AWS_297  # Scheduler CMK
+  - CKV_AWS_26   # SNS encryption: EventBridge can only publish to it with a CMK
+  # Retention, replication and access logs multiply storage cost for no value here.
+  - CKV_AWS_338  # 1-year log retention (14 days is plenty to debug a run)
+  - CKV_AWS_144  # S3 cross-region replication (bronze can be refetched from the APIs)
+  - CKV_AWS_18   # S3 access logging
+  - CKV2_AWS_62  # S3 event notifications: nothing is triggered by uploads
+  # Lambda
+  - CKV_AWS_117  # VPC: the functions call public APIs, which would need a NAT gateway ($30+/month)
+  - CKV_AWS_116  # DLQ: Step Functions invokes synchronously and retries; DLQs are for async calls
+  - CKV_AWS_272  # Code signing is not supported for container images; immutable ECR tags instead
+  - CKV_AWS_115  # Reserved concurrency: new accounts can't reserve below their 10-execution floor
+  # X-Ray: tracing is observability, not a control, and Step Functions logs failures already.
+  - CKV_AWS_50
+  - CKV_AWS_284
