@@ -1,0 +1,282 @@
+{
+  "races": [
+    {
+      "name": "round",
+      "type": "bigint"
+    },
+    {
+      "name": "race_name",
+      "type": "string"
+    },
+    {
+      "name": "circuit_id",
+      "type": "string"
+    },
+    {
+      "name": "circuit_name",
+      "type": "string"
+    },
+    {
+      "name": "locality",
+      "type": "string"
+    },
+    {
+      "name": "country",
+      "type": "string"
+    },
+    {
+      "name": "race_date",
+      "type": "string"
+    },
+    {
+      "name": "race_time",
+      "type": "string"
+    },
+    {
+      "name": "sprint_date",
+      "type": "string"
+    }
+  ],
+  "results": [
+    {
+      "name": "round",
+      "type": "bigint"
+    },
+    {
+      "name": "session_type",
+      "type": "string"
+    },
+    {
+      "name": "driver_id",
+      "type": "string"
+    },
+    {
+      "name": "driver_code",
+      "type": "string"
+    },
+    {
+      "name": "driver_number",
+      "type": "bigint"
+    },
+    {
+      "name": "driver_name",
+      "type": "string"
+    },
+    {
+      "name": "constructor_id",
+      "type": "string"
+    },
+    {
+      "name": "constructor_name",
+      "type": "string"
+    },
+    {
+      "name": "grid",
+      "type": "bigint"
+    },
+    {
+      "name": "position",
+      "type": "bigint"
+    },
+    {
+      "name": "position_text",
+      "type": "string"
+    },
+    {
+      "name": "points",
+      "type": "double"
+    },
+    {
+      "name": "laps",
+      "type": "bigint"
+    },
+    {
+      "name": "status",
+      "type": "string"
+    },
+    {
+      "name": "time_millis",
+      "type": "bigint"
+    },
+    {
+      "name": "gap_text",
+      "type": "string"
+    }
+  ],
+  "lap_positions": [
+    {
+      "name": "round",
+      "type": "bigint"
+    },
+    {
+      "name": "lap",
+      "type": "bigint"
+    },
+    {
+      "name": "driver_id",
+      "type": "string"
+    },
+    {
+      "name": "position",
+      "type": "bigint"
+    },
+    {
+      "name": "lap_time_ms",
+      "type": "bigint"
+    }
+  ],
+  "driver_standings": [
+    {
+      "name": "round",
+      "type": "bigint"
+    },
+    {
+      "name": "driver_id",
+      "type": "string"
+    },
+    {
+      "name": "driver_code",
+      "type": "string"
+    },
+    {
+      "name": "driver_name",
+      "type": "string"
+    },
+    {
+      "name": "constructor_id",
+      "type": "string"
+    },
+    {
+      "name": "position",
+      "type": "bigint"
+    },
+    {
+      "name": "points",
+      "type": "double"
+    },
+    {
+      "name": "wins",
+      "type": "bigint"
+    }
+  ],
+  "constructor_standings": [
+    {
+      "name": "round",
+      "type": "bigint"
+    },
+    {
+      "name": "constructor_id",
+      "type": "string"
+    },
+    {
+      "name": "constructor_name",
+      "type": "string"
+    },
+    {
+      "name": "position",
+      "type": "bigint"
+    },
+    {
+      "name": "points",
+      "type": "double"
+    },
+    {
+      "name": "wins",
+      "type": "bigint"
+    }
+  ],
+  "sessions": [
+    {
+      "name": "session_key",
+      "type": "bigint"
+    },
+    {
+      "name": "meeting_key",
+      "type": "bigint"
+    },
+    {
+      "name": "session_name",
+      "type": "string"
+    },
+    {
+      "name": "date_start",
+      "type": "string"
+    },
+    {
+      "name": "date_end",
+      "type": "string"
+    },
+    {
+      "name": "country_name",
+      "type": "string"
+    },
+    {
+      "name": "location",
+      "type": "string"
+    },
+    {
+      "name": "circuit_short_name",
+      "type": "string"
+    }
+  ],
+  "race_control": [
+    {
+      "name": "session_key",
+      "type": "bigint"
+    },
+    {
+      "name": "message_at",
+      "type": "string"
+    },
+    {
+      "name": "lap_number",
+      "type": "bigint"
+    },
+    {
+      "name": "category",
+      "type": "string"
+    },
+    {
+      "name": "flag",
+      "type": "string"
+    },
+    {
+      "name": "scope",
+      "type": "string"
+    },
+    {
+      "name": "sector",
+      "type": "bigint"
+    },
+    {
+      "name": "driver_number",
+      "type": "bigint"
+    },
+    {
+      "name": "message",
+      "type": "string"
+    }
+  ],
+  "drivers": [
+    {
+      "name": "session_key",
+      "type": "bigint"
+    },
+    {
+      "name": "driver_number",
+      "type": "bigint"
+    },
+    {
+      "name": "name_acronym",
+      "type": "string"
+    },
+    {
+      "name": "full_name",
+      "type": "string"
+    },
+    {
+      "name": "team_name",
+      "type": "string"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+name: f1_race_analytics
+version: "1.0.0"
+config-version: 2
+profile: f1_race_analytics
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+# Every model runs on DuckDB locally and on Athena in AWS, so SQL sticks to what both support:
+# no QUALIFY, arg_max or any_value. table_type and format only apply on Athena (Iceberg).
+models:
+  f1_race_analytics:
+    +table_type: iceberg
+    +format: parquet
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: table
+    marts:
+      +materialized: table
+
+vars:
+  silver_dir: "{{ env_var('F1_DATA_DIR', '../data') }}/silver"

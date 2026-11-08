@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # A week's cooldown: most malicious releases are caught and pulled within days.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: terraform
+    directory: /infra/envs/dev
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

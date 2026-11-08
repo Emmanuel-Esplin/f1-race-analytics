@@ -1,0 +1,15 @@
+version: 2
+
+# Only Athena reads these; locally the silver() macro reads the Parquet files directly.
+sources:
+  - name: silver
+    schema: f1_race_analytics_silver
+    tables:
+      - name: races
+      - name: results
+      - name: lap_positions
+      - name: driver_standings
+      - name: constructor_standings
+      - name: sessions
+      - name: race_control
+      - name: drivers

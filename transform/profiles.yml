@@ -1,0 +1,17 @@
+# No secrets here: Athena uses the AWS credentials of whoever runs dbt.
+f1_race_analytics:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('F1_DATA_DIR', '../data') }}/gold/warehouse.duckdb"
+      threads: 4
+    athena:
+      type: athena
+      region_name: "{{ env_var('AWS_REGION', 'eu-west-1') }}"
+      database: awsdatacatalog
+      schema: f1_race_analytics_marts
+      work_group: f1-race-analytics
+      s3_staging_dir: "s3://{{ env_var('LAKE_BUCKET', '') }}/athena-results/dbt/"
+      s3_data_dir: "s3://{{ env_var('LAKE_BUCKET', '') }}/marts/"
+      threads: 2

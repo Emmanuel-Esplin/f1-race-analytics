@@ -1,0 +1,8 @@
+*
+!requirements.lock
+!ingestion/
+!processing/
+!transform/
+transform/target/
+transform/logs/
+**/__pycache__/

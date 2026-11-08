@@ -13,7 +13,7 @@ Seasons 2023 onward, because OpenF1 race-control data starts there.
 
 ## Crashes
 
-Jolpica stopped recording why a car retired after 2023: every retirement is just `Retired`.
+Jolpica does not say why a car retired: nearly every retirement since 2023 is just `Retired`.
 So a crash comes from race control: an incident noted as a collision or crash, or a stopped car
 that brought out a Safety Car, Virtual Safety Car or red flag. One event can involve several
 cars; it counts once.

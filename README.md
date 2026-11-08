@@ -18,12 +18,13 @@ Jolpica API ─┐                                      ┌─> marts (DuckDB lo
 OpenF1 API  ─┘                                      └─> Streamlit dashboard
 ```
 
-| Layer | Local | AWS (planned) |
+| Layer | Local | AWS (deployed, eu-west-1) |
 | --- | --- | --- |
-| Ingestion | Python, httpx, tenacity | Lambda container on an EventBridge schedule |
+| Ingestion | Python, httpx, tenacity | Lambda container (arm64), EventBridge Scheduler Mon/Thu |
 | Storage | `data/bronze`, `data/silver` | S3 |
-| Transform | dbt on DuckDB | dbt on Athena, Iceberg tables |
-| Orchestration | Makefile | Step Functions |
+| Silver | Parquet files | Parquet in S3, Glue tables with partition projection |
+| Transform | dbt on DuckDB | dbt on Athena (Iceberg), run from Lambda |
+| Orchestration | Makefile | Step Functions (ingest loops until done, then silver, then dbt) |
 | Infrastructure | n/a | Terraform |
 
 ## Run it
@@ -37,10 +38,16 @@ make ingest          # full backfill takes about 2.5 hours (Jolpica allows ~500 
 ## Status
 
 - [x] Phase 1: ingestion to bronze
-- [ ] Phase 2: silver and dbt marts on DuckDB
+- [ ] Phase 2: silver and dbt marts (winners, laps led, championship done; crashes, neutralised
+  time and penalties next)
 - [ ] Phase 3: reconciliation against known results
 - [ ] Phase 4: dashboard
-- [ ] Phase 5: AWS
+- [x] Phase 5: AWS (Terraform, Lambda, Step Functions, Athena)
+
+## Security
+
+See [SECURITY.md](SECURITY.md): locked and audited dependencies, pinned actions and base image,
+IaC scanning, least-privilege IAM per pipeline step, and no long-lived keys.
 
 ## Data
 

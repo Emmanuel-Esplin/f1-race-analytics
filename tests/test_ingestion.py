@@ -10,11 +10,9 @@ from ingestion.run import parse_seasons
 
 
 @pytest.fixture(autouse=True)
-def bronze_dir(tmp_path, monkeypatch):
-    monkeypatch.setattr(landing, "DATA_DIR", tmp_path)
+def no_backoff(monkeypatch):
     # No real back-off sleeps in tests.
     monkeypatch.setattr(ApiClient.get_json.retry, "wait", wait_none())
-    return tmp_path
 
 
 def client_for(handler) -> ApiClient:
@@ -58,12 +56,14 @@ def test_client_errors_are_not_retried():
 
 def test_bronze_path_is_hive_style(bronze_dir):
     path = landing.bronze_path("jolpica", "results", season=2023, round="01")
-    assert path == bronze_dir / "bronze/jolpica/results/season=2023/round=01.json"
-    assert landing.bronze_path("openf1", "sessions", season=2024).name == "season=2024.json"
+    assert path == f"{bronze_dir}/bronze/jolpica/results/season=2023/round=01.json"
+    assert landing.bronze_path("openf1", "sessions", season=2024).endswith(
+        "/sessions/season=2024.json"
+    )
 
 
 def test_is_final_compares_fetch_time_with_settle_time(bronze_dir):
-    path = bronze_dir / "x.json"
+    path = f"{bronze_dir}/x.json"
     assert not landing.is_final(path, datetime.now(UTC))
     landing.write_bronze(path, [1], "https://example.test")
     assert landing.read_bronze(path) == [1]
@@ -99,7 +99,7 @@ def test_jolpica_season_skips_future_races_and_adds_sprints(bronze_dir):
     written = jolpica.ingest_season(client_for(handler), 2026, date(2026, 11, 8))
     assert written == 1 + 4 + 5  # calendar, round 1, round 2 with sprint
     assert not any("/2026/3/" in path for path in requested)
-    assert (bronze_dir / "bronze/jolpica/sprint/season=2026/round=02.json").exists()
+    assert landing.store().exists(f"{bronze_dir}/bronze/jolpica/sprint/season=2026/round=02.json")
 
     # A second run refetches only the calendar of the season still in progress.
     requested.clear()
@@ -127,3 +127,36 @@ def test_openf1_lands_finished_race_sessions_only(bronze_dir):
 def test_parse_seasons():
     assert parse_seasons("2023-2025") == [2023, 2024, 2025]
     assert parse_seasons("2023,2026") == [2023, 2026]
+
+
+def test_deadline_stops_new_requests():
+    import time
+
+    from ingestion.client import OutOfTimeError
+
+    client = ApiClient(
+        "https://example.test",
+        0,
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})),
+        deadline=time.monotonic() - 1,
+    )
+    with pytest.raises(OutOfTimeError):
+        client.get_json("/x")
+
+
+def test_ingest_reports_incomplete_when_out_of_time(monkeypatch):
+    import time
+
+    from ingestion import run
+
+    calls = []
+
+    def fake_season(client, season, today, refresh):
+        calls.append(season)
+        client._wait_turn()  # the first request after the deadline raises
+        return 1
+
+    monkeypatch.setattr(jolpica, "ingest_season", fake_season)
+    result = run.ingest(["jolpica"], [2025, 2026], deadline=time.monotonic() - 1)
+    assert result == {"written": 0, "complete": False}
+    assert calls == [2025]
