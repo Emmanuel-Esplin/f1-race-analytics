@@ -16,8 +16,9 @@ IMAGE_TAG ?= $(shell git rev-parse --short=12 HEAD)
 .PHONY: install lint format test ingest ingest-jolpica ingest-openf1 silver gold all schemas \
 	tf-check tf-plan tf-apply tf-destroy image-push bronze-upload pipeline-run dbt-athena
 
-DBT = cd transform && F1_DATA_DIR=$(CURDIR)/data DBT_SEND_ANONYMOUS_USAGE_STATS=false \
-	$(CURDIR)/.venv/bin/dbt
+# Quoted: the repo path contains a space ("Data Engineer").
+DBT = cd transform && F1_DATA_DIR="$(CURDIR)/data" DBT_SEND_ANONYMOUS_USAGE_STATS=false \
+	"$(CURDIR)/.venv/bin/dbt"
 
 install:
 	# .nosync keeps these out of iCloud, which offloads files and makes reads hang.
@@ -110,4 +111,4 @@ pipeline-run:
 dbt-athena:
 	cd transform && LAKE_BUCKET=$$(cd .. && $(TF_OUT) lake_bucket) \
 		DBT_SEND_ANONYMOUS_USAGE_STATS=false \
-		$(CURDIR)/.venv/bin/dbt build --profiles-dir . --target athena
+		"$(CURDIR)/.venv/bin/dbt" build --profiles-dir . --target athena
