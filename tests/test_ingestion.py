@@ -160,3 +160,26 @@ def test_ingest_reports_incomplete_when_out_of_time(monkeypatch):
     result = run.ingest(["jolpica"], [2025, 2026], deadline=time.monotonic() - 1)
     assert result == {"written": 0, "complete": False}
     assert calls == [2025]
+
+
+def test_openf1_skips_cancelled_sessions_and_treats_404_as_empty(bronze_dir):
+    now = datetime(2026, 11, 8, 17, 0, tzinfo=UTC)
+    sessions = [
+        {
+            "session_key": 1,
+            "session_type": "Race",
+            "date_end": "2023-05-21T15:00:00+00:00",
+            "is_cancelled": True,
+        },
+        {"session_key": 2, "session_type": "Race", "date_end": "2023-06-04T15:00:00+00:00"},
+    ]
+
+    def handler(request):
+        if request.url.path == "/sessions":
+            return httpx.Response(200, json=sessions)
+        assert request.url.params["session_key"] == "2", "cancelled session was requested"
+        return httpx.Response(404, json={"detail": "No results found."})
+
+    assert openf1.ingest_season(client_for(handler), 2023, now) == 3
+    path = landing.bronze_path("openf1", "race_control", season=2023, session_key=2)
+    assert landing.read_bronze(path) == []

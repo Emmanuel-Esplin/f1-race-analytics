@@ -159,7 +159,8 @@ def constructor_standing_rows(pages: list[Row]) -> Iterator[Row]:
 def session_rows(sessions: list[Row]) -> Iterator[Row]:
     """Race and sprint sessions; their date links them to Jolpica rounds."""
     for s in sessions:
-        if s.get("session_type") != "Race":
+        # Cancelled races (2023 Imola) are listed but never ran.
+        if s.get("session_type") != "Race" or s.get("is_cancelled"):
             continue
         yield {
             "season": int(s["year"]),
