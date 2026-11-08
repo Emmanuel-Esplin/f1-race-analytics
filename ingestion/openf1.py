@@ -6,6 +6,8 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import httpx
+
 from ingestion.client import ApiClient
 from ingestion.landing import bronze_path, is_final, read_bronze, store, write_bronze
 
@@ -19,8 +21,19 @@ log = logging.getLogger(__name__)
 
 
 def race_sessions(sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Grands prix and sprints only; practice and qualifying don't feed any mart."""
-    return [s for s in sessions if s.get("session_type") == "Race"]
+    """Grands prix and sprints that took place; practice and qualifying feed no mart."""
+    # Cancelled races (2023 Imola, flooding) stay in the calendar but have no data.
+    return [s for s in sessions if s.get("session_type") == "Race" and not s.get("is_cancelled")]
+
+
+def get_rows(client: ApiClient, endpoint: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    """OpenF1 answers an empty result with 404 "No results found."; that is an empty list."""
+    try:
+        return client.get_json(f"/{endpoint}", params=params)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404 and "No results" in exc.response.text:
+            return []
+        raise
 
 
 def _parse_time(value: str) -> datetime:
@@ -47,7 +60,7 @@ def ingest_season(client: ApiClient, season: int, now: datetime, refresh: bool =
             if not refresh and is_final(target, ended + timedelta(days=SETTLE_DAYS)):
                 continue
             log.info("openf1 %s session_key=%s", endpoint, key)
-            rows = client.get_json(f"/{endpoint}", params={"session_key": key})
+            rows = get_rows(client, endpoint, {"session_key": key})
             write_bronze(target, rows, f"{BASE_URL}/{endpoint}?session_key={key}")
             written += 1
     return written

@@ -38,9 +38,8 @@ make ingest          # full backfill takes about 2.5 hours (Jolpica allows ~500 
 ## Status
 
 - [x] Phase 1: ingestion to bronze
-- [ ] Phase 2: silver and dbt marts (winners, laps led, championship done; crashes, neutralised
-  time and penalties next)
-- [ ] Phase 3: reconciliation against known results
+- [x] Phase 2: silver and dbt marts for all five questions
+- [x] Phase 3: reconciliation against a known race (more to add)
 - [ ] Phase 4: dashboard
 - [x] Phase 5: AWS (Terraform, Lambda, Step Functions, Athena)
 

@@ -38,3 +38,51 @@ models:
           - accepted_values:
               arguments:
                 values: [drivers, constructors]
+
+  - name: mart_neutralised_time
+    description: Safety Car, VSC and red-flag periods, with duration and cause.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [session_key, period_type, started_at]
+    columns:
+      - name: period_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [safety_car, vsc, red_flag]
+      - name: cause
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [collision, car_stopped, other]
+      - name: duration_min
+        data_tests: [not_null]
+
+  - name: mart_race_crashes
+    description: Crashes and minutes neutralised by them, per race and sprint.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, session_type]
+    columns:
+      - name: crashes
+        data_tests: [not_null]
+
+  - name: mart_penalties
+    description: Every penalty given during a race or sprint.
+    columns:
+      - name: penalty_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [time, drive_through, stop_go]
+      - name: driver_id
+        data_tests: [not_null]
+
+  - name: mart_driver_penalties
+    description: Penalties per driver per season.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, driver_code]
