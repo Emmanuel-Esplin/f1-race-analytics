@@ -37,13 +37,19 @@ class Storage:
         with self.fs.open_input_stream(path) as stream:
             return stream.read()
 
+    def make_parent(self, path: str) -> None:
+        """Create the folder for `path`. S3 has no folders, and pyarrow's version of this
+        checks the bucket exists, which needs more permissions than the pipeline has."""
+        if self.local:
+            self.fs.create_dir(path.rsplit("/", 1)[0], recursive=True)
+
     def write_bytes(self, path: str, data: bytes) -> None:
         """S3 puts are atomic; locally write a temp file and rename, so readers never see half."""
         if not self.local:
             with self.fs.open_output_stream(path) as stream:
                 stream.write(data)
             return
-        self.fs.create_dir(path.rsplit("/", 1)[0], recursive=True)
+        self.make_parent(path)
         tmp = path + ".tmp"
         with self.fs.open_output_stream(tmp) as stream:
             stream.write(data)
@@ -58,8 +64,14 @@ class Storage:
         )
 
     def delete_dir(self, directory: str) -> None:
-        if self.fs.get_file_info(directory).type != pafs.FileType.NotFound:
-            self.fs.delete_dir(directory)
+        """Delete everything under `directory`. On S3 this deletes object by object, which
+        needs only List and Delete on the prefix, not the bucket-level checks pyarrow makes."""
+        if self.local:
+            if self.fs.get_file_info(directory).type != pafs.FileType.NotFound:
+                self.fs.delete_dir(directory)
+            return
+        for path in self.list_files(directory, ""):
+            self.fs.delete_file(path)
 
 
 @cache

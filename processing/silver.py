@@ -355,7 +355,7 @@ def build_table(table: str, store: landing.Storage) -> int:
     total = 0
     for season, rows in sorted(rows_by_season.items()):
         target = store.path("silver", table, f"season={season}", "part-0.parquet")
-        store.fs.create_dir(target.rsplit("/", 1)[0], recursive=True)
+        store.make_parent(target)
         table_data = pa.Table.from_pylist(rows, schema=SCHEMAS[table])
         pq.write_table(table_data, target, filesystem=store.fs)
         total += len(rows)
