@@ -118,5 +118,6 @@ dbt-athena:
 # Streamlit is kept out of requirements.lock, so it never lands in the Lambda image.
 dashboard:
 	$(PYTHON) -m pip install --quiet -r dashboard/requirements.txt
+	# Bound to this machine only; drop --server.address to share on the local network.
 	F1_DATA_DIR="$(CURDIR)/data" $(PYTHON) -m streamlit run dashboard/app.py \
-		--browser.gatherUsageStats false
+		--server.address 127.0.0.1 --browser.gatherUsageStats false
