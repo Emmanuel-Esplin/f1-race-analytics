@@ -1,6 +1,7 @@
 # Usage: make install | make lint | make test | make ingest | make silver | make gold | make all
 #        make schemas | make tf-check | make tf-plan | make tf-apply | make tf-destroy
 #        make image-push | make bronze-upload | make pipeline-run | make dbt-athena
+#        make dashboard
 PYTHON ?= .venv/bin/python
 BOOTSTRAP_PYTHON ?= /opt/anaconda3/bin/python
 # macOS can hide the editable-install .pth under iCloud-synced Desktop, so set this explicitly.
@@ -14,7 +15,8 @@ TF_OUT = $(TF_DEV) output -raw
 IMAGE_TAG ?= $(shell git rev-parse --short=12 HEAD)
 
 .PHONY: install lint format test ingest ingest-jolpica ingest-openf1 silver gold all schemas \
-	tf-check tf-plan tf-apply tf-destroy image-push bronze-upload pipeline-run dbt-athena
+	tf-check tf-plan tf-apply tf-destroy image-push bronze-upload pipeline-run dbt-athena \
+	dashboard
 
 # Quoted: the repo path contains a space ("Data Engineer").
 DBT = cd transform && F1_DATA_DIR="$(CURDIR)/data" DBT_SEND_ANONYMOUS_USAGE_STATS=false \
@@ -112,3 +114,9 @@ dbt-athena:
 	cd transform && LAKE_BUCKET=$$(cd .. && $(TF_OUT) lake_bucket) \
 		DBT_SEND_ANONYMOUS_USAGE_STATS=false \
 		"$(CURDIR)/.venv/bin/dbt" build --profiles-dir . --target athena
+
+# Streamlit is kept out of requirements.lock, so it never lands in the Lambda image.
+dashboard:
+	$(PYTHON) -m pip install --quiet -r dashboard/requirements.txt
+	F1_DATA_DIR="$(CURDIR)/data" $(PYTHON) -m streamlit run dashboard/app.py \
+		--browser.gatherUsageStats false

@@ -33,6 +33,8 @@ OpenF1 API  ─┘                                      └─> Streamlit dashbo
 make install
 make test
 make ingest          # full backfill takes about 2.5 hours (Jolpica allows ~500 requests/hour)
+make gold            # silver + every dbt model and test on DuckDB
+make dashboard       # Streamlit at http://localhost:8501
 ```
 
 ## Status
@@ -40,7 +42,7 @@ make ingest          # full backfill takes about 2.5 hours (Jolpica allows ~500 
 - [x] Phase 1: ingestion to bronze
 - [x] Phase 2: silver and dbt marts for all five questions
 - [x] Phase 3: reconciliation against a known race (more to add)
-- [ ] Phase 4: dashboard
+- [x] Phase 4: dashboard (`make dashboard`, Streamlit on the DuckDB marts)
 - [x] Phase 5: AWS (Terraform, Lambda, Step Functions, Athena)
 
 ## Security
