@@ -37,6 +37,28 @@ make gold            # silver + every dbt model and test on DuckDB
 make dashboard       # Streamlit at http://localhost:8501
 ```
 
+## Dashboard
+
+```bash
+make gold         # once, or after new data, to build data/gold/warehouse.duckdb
+make dashboard    # then open http://localhost:8501
+```
+
+The page only loads while `make dashboard` is running; keep that terminal open and press
+Ctrl+C to stop it. If the browser says the page failed to load, the app isn't running.
+
+- **Local only:** it listens on 127.0.0.1, so other devices on your network can't open it.
+  To share it on your network, remove `--server.address 127.0.0.1` from the `dashboard`
+  target in the Makefile.
+- **Port in use:** if 8501 is taken, Streamlit picks the next free port (8502, ...) and prints
+  the address in the terminal.
+- **Data:** it reads the local DuckDB marts, not AWS, so it keeps working without an AWS
+  account.
+
+It shows the season's headline numbers and auto-written insights, the drivers' championship
+and standings, crashes and minutes lost per round, wins, laps led and penalties, with the
+tables behind every chart under "Explore the data". Theme: `.streamlit/config.toml`.
+
 ## Status
 
 - [x] Phase 1: ingestion to bronze
