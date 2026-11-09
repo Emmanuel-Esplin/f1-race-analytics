@@ -42,7 +42,7 @@ jobs:
       # Versions pinned so the audit tools themselves can't change under us.
       - run: pip install pip-audit==2.10.1 zizmor==1.32.0 checkov==3.4.3
       # Known CVEs in any locked dependency fail the build.
-      - run: pip-audit -r requirements.lock --progress-spinner off
+      - run: pip-audit -r requirements.lock -r dashboard/requirements.txt --progress-spinner off
       # Workflow misconfigurations: injection, unpinned actions, excess permissions.
       - run: zizmor --offline .github/workflows/
       # Terraform misconfigurations; accepted trade-offs are listed with reasons in .checkov.yaml.
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.lock
+      - run: pip install -r requirements.lock -r dashboard/requirements.txt
       # Tests never call the live APIs; they use httpx.MockTransport.
       - run: python -m ruff check .
       - run: python -m ruff format --check .
