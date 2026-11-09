@@ -1,0 +1,32 @@
+# Dashboard theme: quiet surfaces, one accent, Inter, rounded cards. Colours follow the
+# reference data-viz palette; light and dark are each chosen, not an automatic flip.
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+baseRadius = "0.75rem"
+buttonRadius = "full"
+showWidgetBorder = true
+metricValueFontSize = "2rem"
+metricValueFontWeight = 600
+chartCategoricalColors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
+
+[theme.light]
+primaryColor = "#2a78d6"
+backgroundColor = "#fcfcfb"
+secondaryBackgroundColor = "#f3f3f1"
+textColor = "#0b0b0b"
+borderColor = "#e4e3df"
+
+[theme.dark]
+primaryColor = "#3987e5"
+backgroundColor = "#121211"
+secondaryBackgroundColor = "#1a1a19"
+textColor = "#f0efec"
+borderColor = "#2c2c2a"
+chartCategoricalColors = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
